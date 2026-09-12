@@ -1,0 +1,1 @@
+https://id.vk.ru/auth?return_auth_hash=bcc924420e44959244&redirect_uri=https%3A%2F%2Foauth.vk.ru%2Fblank.html&redirect_uri_hash=b27d426f74714d0b1c&force_hash=1&app_id=6287487&response_type=token&code_challenge=&code_challenge_method=&scope=408861919&state=
