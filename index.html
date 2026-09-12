@@ -3,35 +3,165 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Галерея</title>
+  <title>Галерея PHOTO</title>
   <style>
-    body { margin: 0; padding: 20px; background: #0d1117; color: #c9d1d9; font-family: sans-serif; }
-    h1 { text-align: center; margin-bottom: 24px; }
-    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-    .gallery img { width: 100%; height: 220px; object-fit: cover; border-radius: 8px; transition: transform 0.2s; cursor: pointer; }
-    .gallery img:hover { transform: scale(1.03); }
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --accent: #58a6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; }
+
+    header { max-width: 1400px; margin: 0 auto 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .title-group { display: flex; align-items: baseline; gap: 10px; }
+    .counter { color: #8b949e; font-size: 0.9rem; }
+    .controls { display: flex; gap: 10px; flex-grow: 1; justify-content: flex-end; }
+    input, select { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; }
+    input:focus, select:focus { border-color: var(--accent); }
+    input { width: 100%; max-width: 250px; }
+
+    .gallery { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; }
+    .card:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .card img { width: 100%; height: 200px; object-fit: cover; background: #000; }
+    .card-footer { padding: 10px; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; }
+
+    /* Lightbox Modal */
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 1000; align-items: center; justify-content: center; user-select: none; }
+    .lightbox.active { display: flex; }
+    .lightbox-img { max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 4px; }
+    .btn { position: absolute; background: rgba(255, 255, 255, 0.1); border: none; color: #fff; font-size: 20px; padding: 12px; cursor: pointer; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; text-decoration: none; }
+    .btn:hover { background: rgba(255, 255, 255, 0.25); }
+    .btn-close { top: 20px; right: 20px; }
+    .btn-download { top: 20px; right: 80px; font-size: 16px; }
+    .btn-prev { left: 20px; }
+    .btn-next { right: 20px; }
+    .lightbox-info { position: absolute; bottom: 20px; color: #8b949e; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <h1>Галерея PHOTO</h1>
+
+  <header>
+    <div class="title-group">
+      <h2>PHOTO</h2>
+      <span class="counter" id="count">0 файлов</span>
+    </div>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Поиск по имени...">
+      <select id="sort">
+        <option value="name-asc">Имя: А-Я</option>
+        <option value="name-desc">Имя: Я-А</option>
+      </select>
+    </div>
+  </header>
+
   <div class="gallery" id="gallery"></div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="btn btn-close" id="closeBtn">&times;</button>
+    <a class="btn btn-download" id="downloadBtn" download target="_blank">&#129047;</a>
+    <button class="btn btn-prev" id="prevBtn">&#10094;</button>
+    <button class="btn btn-next" id="nextBtn">&#10095;</button>
+    <img class="lightbox-img" id="lightboxImg" src="" alt="">
+    <div class="lightbox-info" id="lightboxInfo"></div>
+  </div>
+
   <script>
-    fetch('https://api.github.com/repos/Miha22NoAlliance/neironka/contents/PHOTO')
+    const REPO_URL = 'https://api.github.com/repos/Miha22NoAlliance/neironka/contents/PHOTO';
+    let images = [];
+    let visibleImages = [];
+    let currentIndex = 0;
+
+    const galleryEl = document.getElementById('gallery');
+    const countEl = document.getElementById('count');
+    const searchEl = document.getElementById('search');
+    const sortEl = document.getElementById('sort');
+
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxInfo = document.getElementById('lightboxInfo');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    fetch(REPO_URL)
       .then(res => res.json())
       .then(files => {
-        const gallery = document.getElementById('gallery');
-        const imgExt = /\.(jpe?g|png|gif|webp)$/i;
-        files.filter(f => f.type === 'file' && imgExt.test(f.name)).forEach(file => {
-          const img = document.createElement('img');
-          img.src = file.download_url;
-          img.loading = 'lazy';
-          img.onclick = () => window.open(file.download_url, '_blank');
-          gallery.appendChild(img);
-        });
+        const ext = /\.(jpe?g|png|gif|webp|svg)$/i;
+        images = files.filter(f => f.type === 'file' && ext.test(f.name));
+        filterAndRender();
       })
       .catch(err => {
-        document.getElementById('gallery').innerText = 'Ошибка загрузки файлов: ' + err.message;
+        galleryEl.innerHTML = `<p style="color: #f85149">Ошибка загрузки файлов: ${err.message}</p>`;
       });
+
+    function filterAndRender() {
+      const q = searchEl.value.toLowerCase();
+      visibleImages = images.filter(img => img.name.toLowerCase().includes(q));
+
+      if (sortEl.value === 'name-asc') {
+        visibleImages.sort((a, b) => a.name.localeCompare(b.name));
+      } else {
+        visibleImages.sort((a, b) => b.name.localeCompare(a.name));
+      }
+
+      countEl.innerText = `${visibleImages.length} из ${images.length}`;
+      renderGallery();
+    }
+
+    function renderGallery() {
+      galleryEl.innerHTML = '';
+      visibleImages.forEach((img, idx) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${img.download_url}" loading="lazy" alt="${img.name}">
+          <div class="card-footer" title="${img.name}">${img.name}</div>
+        `;
+        card.onclick = () => openLightbox(idx);
+        galleryEl.appendChild(card);
+      });
+    }
+
+    function openLightbox(index) {
+      currentIndex = index;
+      const cur = visibleImages[currentIndex];
+      lightboxImg.src = cur.download_url;
+      downloadBtn.href = cur.download_url;
+      lightboxInfo.innerText = `${currentIndex + 1} / ${visibleImages.length} — ${cur.name}`;
+      lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      lightboxImg.src = '';
+    }
+
+    function showNext() {
+      currentIndex = (currentIndex + 1) % visibleImages.length;
+      openLightbox(currentIndex);
+    }
+
+    function showPrev() {
+      currentIndex = (currentIndex - 1 + visibleImages.length) % visibleImages.length;
+      openLightbox(currentIndex);
+    }
+
+    searchEl.addEventListener('input', filterAndRender);
+    sortEl.addEventListener('change', filterAndRender);
+
+    document.getElementById('closeBtn').onclick = closeLightbox;
+    document.getElementById('nextBtn').onclick = (e) => { e.stopPropagation(); showNext(); };
+    document.getElementById('prevBtn').onclick = (e) => { e.stopPropagation(); showPrev(); };
+    lightbox.onclick = (e) => { if (e.target === lightbox) closeLightbox(); };
+
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') showNext();
+      if (e.key === 'ArrowLeft') showPrev();
+    });
   </script>
 </body>
 </html>
