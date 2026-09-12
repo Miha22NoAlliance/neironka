@@ -18,10 +18,10 @@
     header { max-width: 1400px; margin: 0 auto 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
     .title-group { display: flex; align-items: baseline; gap: 10px; }
     .counter { color: #8b949e; font-size: 0.9rem; }
-    .controls { display: flex; gap: 10px; flex-grow: 1; justify-content: flex-end; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; flex-grow: 1; justify-content: flex-end; }
     input, select { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; }
     input:focus, select:focus { border-color: var(--accent); }
-    input { width: 100%; max-width: 250px; }
+    input { width: 100%; max-width: 220px; }
 
     .gallery { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
     .card { 
@@ -38,7 +38,8 @@
     }
     .card:hover { transform: translateY(-3px); border-color: var(--accent); }
     .card img { width: 100%; height: 200px; object-fit: cover; background: #010409; }
-    .card-footer { padding: 10px; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; }
+    .card-footer { padding: 8px 10px; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; }
+    .card-tag { font-size: 0.7rem; color: var(--accent); display: block; margin-bottom: 2px; }
 
     #sentinel { height: 40px; width: 100%; max-width: 1400px; margin: 20px auto; text-align: center; color: #8b949e; }
 
@@ -48,10 +49,10 @@
     .btn { position: absolute; background: rgba(255, 255, 255, 0.1); border: none; color: #fff; font-size: 20px; padding: 12px; cursor: pointer; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; text-decoration: none; }
     .btn:hover { background: rgba(255, 255, 255, 0.25); }
     .btn-close { top: 20px; right: 20px; }
-    .btn-download { top: 20px; right: 80px; font-size: 16px; }
+    .btn-open { top: 20px; right: 80px; font-size: 20px; }
     .btn-prev { left: 20px; }
     .btn-next { right: 20px; }
-    .lightbox-info { position: absolute; bottom: 20px; color: #8b949e; font-size: 0.9rem; }
+    .lightbox-info { position: absolute; bottom: 20px; color: #8b949e; font-size: 0.9rem; text-align: center; width: 80%; }
   </style>
 </head>
 <body>
@@ -63,9 +64,13 @@
     </div>
     <div class="controls">
       <input type="text" id="search" placeholder="Поиск по имени...">
+      <select id="deviceFilter">
+        <option value="all">Все устройства</option>
+      </select>
       <select id="sort">
         <option value="name-asc">Имя: А-Я</option>
         <option value="name-desc">Имя: Я-А</option>
+        <option value="device">По устройству</option>
       </select>
     </div>
   </header>
@@ -74,10 +79,10 @@
   <div id="sentinel"></div>
 
   <div class="lightbox" id="lightbox">
-    <button class="btn btn-close" id="closeBtn">&times;</button>
-    <a class="btn btn-download" id="downloadBtn" download target="_blank">&#129047;</a>
-    <button class="btn btn-prev" id="prevBtn">&#10094;</button>
-    <button class="btn btn-next" id="nextBtn">&#10095;</button>
+    <button class="btn btn-close" id="closeBtn" title="Закрыть (Esc)">&times;</button>
+    <a class="btn btn-open" id="openBtn" target="_blank" rel="noopener noreferrer" title="Открыть оригинал">&#8599;</a>
+    <button class="btn btn-prev" id="prevBtn" title="Назад (←)">&#10094;</button>
+    <button class="btn btn-next" id="nextBtn" title="Вперед (→)">&#10095;</button>
     <img class="lightbox-img" id="lightboxImg" src="" alt="">
     <div class="lightbox-info" id="lightboxInfo"></div>
   </div>
@@ -98,42 +103,73 @@
     const galleryEl = document.getElementById('gallery');
     const countEl = document.getElementById('count');
     const searchEl = document.getElementById('search');
+    const deviceFilterEl = document.getElementById('deviceFilter');
     const sortEl = document.getElementById('sort');
     const sentinel = document.getElementById('sentinel');
 
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightboxImg');
     const lightboxInfo = document.getElementById('lightboxInfo');
-    const downloadBtn = document.getElementById('downloadBtn');
+    const openBtn = document.getElementById('openBtn');
+
+    function detectDevice(filename) {
+      if (/^_?DSC/i.test(filename)) return 'Камера (DSC)';
+      if (/lmc|alisa/i.test(filename)) return 'Смартфон (LMC/ALISA)';
+      if (/^PXL/i.test(filename)) return 'Google Pixel';
+      if (/^IMG/i.test(filename)) return 'Смартфон (IMG)';
+      return 'Другое';
+    }
 
     function getOriginalUrl(filename) {
       return `PHOTO/${encodeURIComponent(filename)}`;
     }
 
     function getThumbnailUrl(filename) {
-      const fullUrl = `${BASE_PAGES_URL}/${encodeURIComponent(filename)}`;
-      return `https://wsrv.nl/?url=${encodeURIComponent(fullUrl)}&w=450&output=webp&q=75`;
+      const directUrl = `${BASE_PAGES_URL}/${filename}`;
+      return `https://wsrv.nl/?url=${encodeURIComponent(directUrl)}&w=450&output=webp&q=75`;
     }
 
     fetch(REPO_API)
       .then(res => res.json())
       .then(files => {
         const ext = /\.(jpe?g|png|gif|webp|svg)$/i;
-        allFiles = files.filter(f => f.type === 'file' && ext.test(f.name));
+        allFiles = files
+          .filter(f => f.type === 'file' && ext.test(f.name))
+          .map(f => ({ ...f, device: detectDevice(f.name) }));
+
+        populateDeviceFilter();
         applyFilterAndSort();
       })
       .catch(err => {
         galleryEl.innerHTML = `<p style="color: #f85149">Ошибка загрузки: ${err.message}</p>`;
       });
 
+    function populateDeviceFilter() {
+      const devices = [...new Set(allFiles.map(f => f.device))];
+      devices.forEach(dev => {
+        const opt = document.createElement('option');
+        opt.value = dev;
+        opt.innerText = dev;
+        deviceFilterEl.appendChild(opt);
+      });
+    }
+
     function applyFilterAndSort() {
       const q = searchEl.value.toLowerCase().trim();
-      visibleFiles = allFiles.filter(img => img.name.toLowerCase().includes(q));
+      const selectedDevice = deviceFilterEl.value;
+
+      visibleFiles = allFiles.filter(img => {
+        const matchesQuery = img.name.toLowerCase().includes(q);
+        const matchesDevice = selectedDevice === 'all' || img.device === selectedDevice;
+        return matchesQuery && matchesDevice;
+      });
 
       if (sortEl.value === 'name-asc') {
         visibleFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-      } else {
+      } else if (sortEl.value === 'name-desc') {
         visibleFiles.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
+      } else if (sortEl.value === 'device') {
+        visibleFiles.sort((a, b) => a.device.localeCompare(b.device) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       }
 
       countEl.innerText = `${visibleFiles.length} из ${allFiles.length}`;
@@ -152,11 +188,15 @@
         const globalIndex = renderedCount + indexInSlice;
         const card = document.createElement('div');
         const thumbUrl = getThumbnailUrl(file.name);
+        const origUrl = getOriginalUrl(file.name);
 
         card.className = 'card';
         card.innerHTML = `
-          <img src="${thumbUrl}" loading="lazy" decoding="async" alt="${file.name}">
-          <div class="card-footer" title="${file.name}">${file.name}</div>
+          <img src="${thumbUrl}" loading="lazy" decoding="async" alt="${file.name}" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${origUrl}';}">
+          <div class="card-footer" title="${file.name}">
+            <span class="card-tag">${file.device}</span>
+            ${file.name}
+          </div>
         `;
         card.onclick = () => openLightbox(globalIndex);
         fragment.appendChild(card);
@@ -167,9 +207,7 @@
     }
 
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        loadNextBatch();
-      }
+      if (entries[0].isIntersecting) loadNextBatch();
     }, { rootMargin: '500px' });
 
     observer.observe(sentinel);
@@ -179,15 +217,17 @@
       debounceTimer = setTimeout(applyFilterAndSort, 200);
     });
 
+    deviceFilterEl.addEventListener('change', applyFilterAndSort);
     sortEl.addEventListener('change', applyFilterAndSort);
 
     function openLightbox(index) {
       currentIndex = index;
       const file = visibleFiles[currentIndex];
       const origUrl = getOriginalUrl(file.name);
+
       lightboxImg.src = origUrl;
-      downloadBtn.href = origUrl;
-      lightboxInfo.innerText = `${currentIndex + 1} / ${visibleFiles.length} — ${file.name}`;
+      openBtn.href = origUrl;
+      lightboxInfo.innerText = `${currentIndex + 1} / ${visibleFiles.length} — [${file.device}] ${file.name}`;
       lightbox.classList.add('active');
     }
 
