@@ -1,0 +1,183 @@
+name: Build and Deploy NEIRONKA
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install image metadata reader
+        run: python -m pip install --upgrade Pillow
+
+      - name: Generate gallery.json
+        shell: python
+        run: |
+          from pathlib import Path
+          from PIL import Image, ExifTags
+          import json
+          import re
+
+          root = Path(".").resolve()
+          photo_dir = root / "PHOTO"
+          output = root / "gallery.json"
+
+          extensions = {
+              ".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"
+          }
+
+          if not photo_dir.exists():
+              raise SystemExit("PHOTO directory not found")
+
+          def detect_device(name):
+              if re.match(r"^_?DSC", name, re.I):
+                  return "CAMERA"
+              if re.search(r"lmc|alisa", name, re.I):
+                  return "LMC"
+              if re.match(r"^PXL", name, re.I):
+                  return "PIXEL"
+              if re.match(r"^IMG", name, re.I):
+                  return "PHONE"
+              return "OTHER"
+
+          def exif_date(image):
+              try:
+                  exif = image.getexif()
+                  if not exif:
+                      return ""
+
+                  tags = {
+                      ExifTags.TAGS.get(k, k): v
+                      for k, v in exif.items()
+                  }
+
+                  raw = (
+                      tags.get("DateTimeOriginal")
+                      or tags.get("DateTimeDigitized")
+                      or tags.get("DateTime")
+                  )
+
+                  if not raw:
+                      return ""
+
+                  match = re.search(
+                      r"(\\d{4}):(\\d{2}):(\\d{2})",
+                      str(raw)
+                  )
+
+                  if match:
+                      return (
+                          f"{match.group(1)}-"
+                          f"{match.group(2)}-"
+                          f"{match.group(3)}"
+                      )
+
+              except Exception as error:
+                  print(f"[WARN] EXIF: {error}")
+
+              return ""
+
+          def filename_date(name):
+              match = re.search(
+                  r"(20\\d{2})[-_]?(\\d{2})[-_]?(\\d{2})",
+                  name
+              )
+
+              if not match:
+                  return ""
+
+              year, month, day = match.groups()
+
+              if 1 <= int(month) <= 12 and 1 <= int(day) <= 31:
+                  return f"{year}-{month}-{day}"
+
+              return ""
+
+          files = sorted(
+              (
+                  path for path in photo_dir.rglob("*")
+                  if path.is_file()
+                  and path.suffix.lower() in extensions
+              ),
+              key=lambda p: p.name.lower()
+          )
+
+          gallery = []
+
+          print(f"Found {len(files)} images")
+
+          for index, path in enumerate(files, 1):
+              relative = path.relative_to(root).as_posix()
+
+              item = {
+                  "id": relative,
+                  "name": path.name,
+                  "path": relative,
+                  "device": detect_device(path.name),
+                  "date": "",
+                  "width": 0,
+                  "height": 0,
+                  "size": path.stat().st_size
+              }
+
+              try:
+                  with Image.open(path) as image:
+                      item["width"], item["height"] = image.size
+                      item["date"] = exif_date(image)
+              except Exception as error:
+                  print(f"[WARN] {path}: {error}")
+
+              if not item["date"]:
+                  item["date"] = filename_date(path.name)
+
+              gallery.append(item)
+              print(f"[{index}/{len(files)}] {path.name}")
+
+          output.write_text(
+              json.dumps(
+                  gallery,
+                  ensure_ascii=False,
+                  indent=2
+              ),
+              encoding="utf-8"
+          )
+
+          print(f"Generated {output}")
+          print(f"Photos: {len(gallery)}")
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
