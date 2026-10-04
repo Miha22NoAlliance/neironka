@@ -1,510 +1,142 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PHOTO Gallery</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #07090e;
-      --surface: rgba(18, 22, 34, 0.7);
-      --surface-border: rgba(255, 255, 255, 0.08);
-      --accent: #6366f1;
-      --accent-glow: rgba(99, 102, 241, 0.25);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --badge-dsc: rgba(56, 189, 248, 0.15);
-      --badge-dsc-text: #38bdf8;
-      --badge-phone: rgba(168, 85, 247, 0.15);
-      --badge-phone-text: #c084fc;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.08) 0px, transparent 50%);
-      background-attachment: fixed;
-      color: var(--text-main);
-      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-      min-height: 100vh;
-      padding: 30px 24px;
-    }
-
-    header {
-      max-width: 1440px;
-      margin: 0 auto 36px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .title-group { display: flex; align-items: center; gap: 14px; }
-    .logo-badge {
-      background: linear-gradient(135deg, #6366f1, #38bdf8);
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px -4px var(--accent-glow);
-    }
-    .logo-badge svg { width: 22px; height: 22px; fill: #fff; }
-
-    h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      background: linear-gradient(180deg, #fff 0%, #cbd5e1 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .counter-pill {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--surface-border);
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 20px;
-    }
-
-    .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .search-wrapper { position: relative; width: 240px; }
-    .search-wrapper svg {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 16px;
-      height: 16px;
-      stroke: var(--text-muted);
-      pointer-events: none;
-    }
-
-    input, select {
-      background: var(--surface);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--surface-border);
-      color: var(--text-main);
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      outline: none;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    input { padding-left: 40px; width: 100%; }
-    input:focus, select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-      background: rgba(26, 32, 48, 0.9);
-    }
-    select { cursor: pointer; }
-
-    .gallery {
-      max-width: 1440px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
-
-    .card {
-      background: var(--surface);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid var(--surface-border);
-      border-radius: 16px;
-      overflow: hidden;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      content-visibility: auto;
-      contain-intrinsic-size: 280px 290px;
-    }
-    .card:hover {
-      transform: translateY(-5px);
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px var(--accent-glow);
-    }
-
-    .img-wrapper {
-      position: relative;
-      width: 100%;
-      height: 220px;
-      background: #0d111a;
-      overflow: hidden;
-    }
-    .card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .card:hover img { transform: scale(1.04); }
-
-    .card-footer {
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .card-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-main);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .badge {
-      align-self: flex-start;
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 6px;
-      text-transform: uppercase;
-    }
-    .badge-camera { background: var(--badge-dsc); color: var(--badge-dsc-text); border: 1px solid rgba(56, 189, 248, 0.2); }
-    .badge-phone { background: var(--badge-phone); color: var(--badge-phone-text); border: 1px solid rgba(168, 85, 247, 0.2); }
-    .badge-other { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); border: 1px solid var(--surface-border); }
-
-    #status {
-      max-width: 600px;
-      margin: 40px auto;
-      text-align: center;
-      padding: 20px;
-      border-radius: 12px;
-      display: none;
-    }
-    .error-box {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      color: #fca5a5;
-    }
-    #sentinel { height: 50px; max-width: 1440px; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
-    .spinner {
-      width: 26px;
-      height: 26px;
-      border: 3px solid rgba(255, 255, 255, 0.1);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Lightbox */
-    .lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(4, 6, 10, 0.92);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-    }
-    .lightbox.active { display: flex; }
-    .lightbox-img {
-      max-width: 88vw;
-      max-height: 82vh;
-      object-fit: contain;
-      border-radius: 12px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--surface-border);
-    }
-    .nav-btn {
-      position: absolute;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #fff;
-      cursor: pointer;
-      border-radius: 50%;
-      width: 52px;
-      height: 52px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      text-decoration: none;
-    }
-    .nav-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.08); }
-    .nav-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; }
-    .btn-close { top: 24px; right: 24px; }
-    .btn-open { top: 24px; right: 88px; }
-    .btn-prev { left: 24px; }
-    .btn-next { right: 24px; }
-
-    .lightbox-info {
-      position: absolute;
-      bottom: 24px;
-      background: rgba(18, 22, 34, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--surface-border);
-      padding: 8px 18px;
-      border-radius: 30px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="NEIRONKA — personal visual archive">
+  <title>NEIRONKA — Visual Archive</title>
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div class="noise" aria-hidden="true"></div>
 
-  <header>
-    <div class="title-group">
-      <div class="logo-badge">
-        <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H4zm0 2h16v1.586l-4.293 4.293a1 1 0 0 1-1.414 0L10 8.586l-6 6V7zm0 9.414 6.707-6.707 4.293 4.293a1 1 0 0 0 1.414 0L20 10.414V17H4v-0.586zM8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>
-      </div>
-      <h1>NEIRONKA</h1>
-      <span class="counter-pill" id="count">0 файлов</span>
-    </div>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="NEIRONKA home">
+      <span class="brand-mark">N</span>
+      <span class="brand-name">NEIRONKA</span>
+      <span class="brand-sub">VISUAL ARCHIVE</span>
+    </a>
 
-    <div class="controls">
-      <div class="search-wrapper">
-        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" id="search" placeholder="Поиск файлов...">
-      </div>
-      <select id="deviceFilter"><option value="all">Все устройства</option></select>
-      <select id="sort">
-        <option value="name-asc">Имя: А-Я</option>
-        <option value="name-desc">Имя: Я-А</option>
-        <option value="device">По устройству</option>
-      </select>
+    <div class="header-meta">
+      <span id="statusText">LOADING ARCHIVE</span>
+      <span class="dot"></span>
+      <a href="https://github.com/Miha22NoAlliance/neironka" target="_blank" rel="noopener">GITHUB ↗</a>
     </div>
   </header>
 
-  <div id="status" class="error-box"></div>
-  <div class="gallery" id="gallery"></div>
-  <div id="sentinel"><div class="spinner"></div></div>
+  <main>
+    <section class="intro">
+      <div class="intro-copy">
+        <div class="eyebrow">PHOTO / 01</div>
+        <h1>Moments,<br><em>kept alive.</em></h1>
+        <p>
+          A living collection of photographs stored in the repository.
+          Browse the archive, open an image, and move through the whole roll like a contact sheet.
+        </p>
+      </div>
 
-  <div class="lightbox" id="lightbox">
-    <button class="nav-btn btn-close" id="closeBtn" title="Закрыть (Esc)">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-    </button>
-    <a class="nav-btn btn-open" id="openBtn" target="_blank" rel="noopener noreferrer" title="Открыть в новой вкладке">
-      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-    </a>
-    <button class="nav-btn btn-prev" id="prevBtn" title="Назад (←)">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
-    </button>
-    <button class="nav-btn btn-next" id="nextBtn" title="Вперед (→)">
-      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-    </button>
-    <img class="lightbox-img" id="lightboxImg" src="" alt="">
-    <div class="lightbox-info" id="lightboxInfo"></div>
-  </div>
+      <div class="intro-side">
+        <div class="stat">
+          <span class="stat-value" id="photoCount">—</span>
+          <span class="stat-label">PHOTOGRAPHS</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="deviceCount">—</span>
+          <span class="stat-label">SOURCES</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="favoriteCount">0</span>
+          <span class="stat-label">SAVED</span>
+        </div>
+      </div>
+    </section>
 
-  <script>
-    const REPO_API = 'https://api.github.com/repos/Miha22NoAlliance/neironka/contents/PHOTO';
-    const BATCH_SIZE = 24;
+    <section class="toolbar" aria-label="Gallery controls">
+      <label class="search">
+        <span class="search-icon">⌕</span>
+        <input id="search" type="search" placeholder="Search the archive…" autocomplete="off">
+        <span class="search-shortcut">/</span>
+      </label>
 
-    let allFiles = [];
-    let visibleFiles = [];
-    let renderedCount = 0;
-    let currentIndex = 0;
-    let debounceTimer = null;
+      <div class="filters" id="deviceFilters">
+        <button class="filter active" data-device="all">ALL <small id="allFilterCount">0</small></button>
+      </div>
 
-    const galleryEl = document.getElementById('gallery');
-    const countEl = document.getElementById('count');
-    const searchEl = document.getElementById('search');
-    const deviceFilterEl = document.getElementById('deviceFilter');
-    const sortEl = document.getElementById('sort');
-    const sentinel = document.getElementById('sentinel');
-    const statusBox = document.getElementById('status');
+      <div class="toolbar-actions">
+        <button class="tool-button" id="shuffleBtn" type="button">SHUFFLE</button>
+        <button class="tool-button" id="viewBtn" type="button" aria-label="Toggle layout">MASONRY</button>
+      </div>
+    </section>
 
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightboxImg');
-    const lightboxInfo = document.getElementById('lightboxInfo');
-    const openBtn = document.getElementById('openBtn');
+    <section class="archive-bar">
+      <div>
+        <span class="archive-label">ARCHIVE</span>
+        <span id="resultText">0 works</span>
+      </div>
+      <div class="archive-right">
+        <label class="select-wrap">
+          <span>SORT</span>
+          <select id="sort">
+            <option value="newest">NEWEST GUESS</option>
+            <option value="oldest">OLDEST GUESS</option>
+            <option value="name">NAME A–Z</option>
+            <option value="favorites">SAVED FIRST</option>
+            <option value="random">RANDOM</option>
+          </select>
+        </label>
+      </div>
+    </section>
 
-    function getPhotoUrl(filename) {
-      return './PHOTO/' + encodeURIComponent(filename);
-    }
+    <div id="error" class="error hidden"></div>
+    <section id="gallery" class="gallery masonry" aria-live="polite"></section>
 
-    function detectDevice(name) {
-      if (/^_?DSC/i.test(name)) return { name: 'Камера (DSC)', class: 'badge-camera' };
-      if (/lmc|alisa/i.test(name)) return { name: 'Смартфон (LMC)', class: 'badge-phone' };
-      if (/^PXL/i.test(name)) return { name: 'Pixel', class: 'badge-phone' };
-      if (/^IMG/i.test(name)) return { name: 'Смартфон', class: 'badge-phone' };
-      return { name: 'Другое', class: 'badge-other' };
-    }
+    <div id="empty" class="empty hidden">
+      <div class="empty-code">404</div>
+      <h2>Nothing here.</h2>
+      <p>Try another search or filter.</p>
+    </div>
 
-    fetch(REPO_API)
-      .then(async res => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || `HTTP ${res.status}`);
-        }
-        return data;
-      })
-      .then(files => {
-        if (!Array.isArray(files)) {
-          throw new Error('Ответ GitHub API не является списком файлов');
-        }
-        const ext = /\.(jpe?g|png|gif|webp|svg)$/i;
-        allFiles = files
-          .filter(f => f.type === 'file' && ext.test(f.name))
-          .map(f => ({ ...f, deviceData: detectDevice(f.name) }));
+    <div id="loading" class="loading">
+      <div class="loader"></div>
+      <span>LOADING IMAGES</span>
+    </div>
+  </main>
 
-        populateDeviceFilter();
-        applyFilterAndSort();
-      })
-      .catch(err => {
-        sentinel.style.display = 'none';
-        statusBox.style.display = 'block';
-        if (err.message.includes('rate limit')) {
-          statusBox.innerHTML = `<strong>Превышен лимит запросов GitHub API (60/час).</strong><br>Пожалуйста, подождите некоторое время перед обновлением.`;
-        } else {
-          statusBox.innerHTML = `<strong>Ошибка загрузки:</strong> ${err.message}`;
-        }
-      });
+  <footer class="site-footer">
+    <span>NEIRONKA / PHOTO</span>
+    <span id="footerDate"></span>
+  </footer>
 
-    function populateDeviceFilter() {
-      const devices = [...new Set(allFiles.map(f => f.deviceData.name))];
-      devices.forEach(dev => {
-        const opt = document.createElement('option');
-        opt.value = dev;
-        opt.innerText = dev;
-        deviceFilterEl.appendChild(opt);
-      });
-    }
+  <dialog id="viewer" class="viewer">
+    <div class="viewer-shell">
+      <button id="viewerClose" class="viewer-close" type="button" aria-label="Close">×</button>
 
-    function applyFilterAndSort() {
-      const q = searchEl.value.toLowerCase().trim();
-      const selectedDevice = deviceFilterEl.value;
+      <div class="viewer-top">
+        <div>
+          <div class="viewer-kicker" id="viewerKicker">PHOTO</div>
+          <div class="viewer-title" id="viewerTitle">—</div>
+        </div>
+        <div class="viewer-counter" id="viewerCounter">1 / 1</div>
+      </div>
 
-      visibleFiles = allFiles.filter(img => {
-        const matchesQuery = img.name.toLowerCase().includes(q);
-        const matchesDevice = selectedDevice === 'all' || img.deviceData.name === selectedDevice;
-        return matchesQuery && matchesDevice;
-      });
+      <div class="viewer-stage">
+        <button id="prevBtn" class="viewer-nav prev" type="button" aria-label="Previous image">←</button>
+        <img id="viewerImage" src="" alt="" draggable="false">
+        <button id="nextBtn" class="viewer-nav next" type="button" aria-label="Next image">→</button>
+      </div>
 
-      if (sortEl.value === 'name-asc') {
-        visibleFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-      } else if (sortEl.value === 'name-desc') {
-        visibleFiles.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
-      } else if (sortEl.value === 'device') {
-        visibleFiles.sort((a, b) => a.deviceData.name.localeCompare(b.deviceData.name) || a.name.localeCompare(b.name, undefined, { numeric: true }));
-      }
+      <div class="viewer-bottom">
+        <div class="viewer-details" id="viewerDetails"></div>
+        <div class="viewer-actions">
+          <button id="favoriteBtn" class="round-action" type="button" title="Save image">☆</button>
+          <a id="downloadBtn" class="action-link" href="" download>DOWNLOAD ↓</a>
+          <a id="openBtn" class="action-link" href="" target="_blank" rel="noopener">ORIGINAL ↗</a>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
-      countEl.innerText = `${visibleFiles.length} из ${allFiles.length}`;
-      galleryEl.innerHTML = '';
-      renderedCount = 0;
-      loadNextBatch();
-    }
-
-    function loadNextBatch() {
-      if (renderedCount >= visibleFiles.length) {
-        sentinel.style.display = 'none';
-        return;
-      }
-      sentinel.style.display = 'flex';
-
-      const fragment = document.createDocumentFragment();
-      const nextSlice = visibleFiles.slice(renderedCount, renderedCount + BATCH_SIZE);
-
-      nextSlice.forEach((file, indexInSlice) => {
-        const globalIndex = renderedCount + indexInSlice;
-        const card = document.createElement('div');
-        const imgUrl = getPhotoUrl(file.name);
-
-        card.className = 'card';
-        card.innerHTML = `
-          <div class="img-wrapper">
-            <img src="${imgUrl}" loading="lazy" decoding="async" alt="${file.name}">
-          </div>
-          <div class="card-footer">
-            <span class="badge ${file.deviceData.class}">${file.deviceData.name}</span>
-            <div class="card-title" title="${file.name}">${file.name}</div>
-          </div>
-        `;
-        card.onclick = () => openLightbox(globalIndex);
-        fragment.appendChild(card);
-      });
-
-      galleryEl.appendChild(fragment);
-      renderedCount += nextSlice.length;
-
-      if (renderedCount >= visibleFiles.length) sentinel.style.display = 'none';
-    }
-
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) loadNextBatch();
-    }, { rootMargin: '400px' });
-
-    observer.observe(sentinel);
-
-    searchEl.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(applyFilterAndSort, 180);
-    });
-
-    deviceFilterEl.addEventListener('change', applyFilterAndSort);
-    sortEl.addEventListener('change', applyFilterAndSort);
-
-    function openLightbox(index) {
-      currentIndex = index;
-      const file = visibleFiles[currentIndex];
-      const imgUrl = getPhotoUrl(file.name);
-
-      lightboxImg.src = imgUrl;
-      openBtn.href = imgUrl;
-      lightboxInfo.innerHTML = `
-        <span class="badge ${file.deviceData.class}">${file.deviceData.name}</span>
-        <span>${currentIndex + 1} / ${visibleFiles.length} — ${file.name}</span>
-      `;
-      lightbox.classList.add('active');
-    }
-
-    function closeLightbox() {
-      lightbox.classList.remove('active');
-      lightboxImg.src = '';
-    }
-
-    function showNext() {
-      if (!visibleFiles.length) return;
-      currentIndex = (currentIndex + 1) % visibleFiles.length;
-      openLightbox(currentIndex);
-    }
-
-    function showPrev() {
-      if (!visibleFiles.length) return;
-      currentIndex = (currentIndex - 1 + visibleFiles.length) % visibleFiles.length;
-      openLightbox(currentIndex);
-    }
-
-    document.getElementById('closeBtn').onclick = closeLightbox;
-    document.getElementById('nextBtn').onclick = (e) => { e.stopPropagation(); showNext(); };
-    document.getElementById('prevBtn').onclick = (e) => { e.stopPropagation(); showPrev(); };
-    lightbox.onclick = (e) => { if (e.target === lightbox) closeLightbox(); };
-
-    document.addEventListener('keydown', (e) => {
-      if (!lightbox.classList.contains('active')) return;
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowRight') showNext();
-      if (e.key === 'ArrowLeft') showPrev();
-    });
-  </script>
+  <script src="./app.js"></script>
 </body>
 </html>
