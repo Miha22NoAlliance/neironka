@@ -155,7 +155,7 @@ function buildFilters() {
     container.appendChild(button);
   }
 
-  $("#allFilterCount").textContent = state.all.length;
+  // The filter bar is rebuilt above, so its count is already rendered in the "ALL" button.
 }
 
 function apply() {
